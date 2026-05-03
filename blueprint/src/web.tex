@@ -1,0 +1,27 @@
+% This file makes a web version of the blueprint
+% It should include all the \usepackage needed for this version.
+% The template includes standard AMS packages.
+% It is otherwise a very minimal preamble (you should probably at least
+% add cleveref and tikz-cd).
+
+\documentclass{report}
+
+\usepackage{amssymb, amsthm, amsmath}
+\usepackage{hyperref}
+\usepackage[showmore]{blueprint}
+
+
+\input{macros/common}
+\input{macros/web}
+
+\home{https://Leandr0ER.github.io/taylor-project}
+\github{https://github.com/Leandr0ER/taylor-project}
+\dochome{https://Leandr0ER.github.io/taylor-project/docs}
+
+\title{taylor-project}
+\author{Leandro Estrada}
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}
