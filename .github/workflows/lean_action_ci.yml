@@ -2,20 +2,81 @@ name: Lean Action CI
 
 on:
   push:
+    branches:
+      - main
+      - master
   pull_request:
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read # Read access to repository contents
-  pages: write # Write access to GitHub Pages
-  id-token: write # Write access to ID tokens
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
-      - uses: leanprover/lean-action@v1
-      - uses: leanprover-community/docgen-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Lean
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "" # Don't build twice if docgen does it
+
+      - name: Build documentation
+        uses: leanprover-community/docgen-action@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install leanblueprint
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex texlive-fonts-recommended texlive-latex-extra texlive-science libgmp-dev ghostscript latexmk
+
+      - name: Build blueprint PDF
+        run: |
+          cd blueprint
+          leanblueprint pdf
+
+      - name: Build blueprint Web
+        run: |
+          cd blueprint
+          leanblueprint web
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir out
+          cp -r blueprint/web/* out/
+          # Copy PDF if it exists in expected locations
+          cp blueprint/src/print.pdf out/blueprint.pdf || cp blueprint/print.pdf out/blueprint.pdf || true
+          mkdir -p out/docs
+          cp -r .lake/build/doc/* out/docs/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
